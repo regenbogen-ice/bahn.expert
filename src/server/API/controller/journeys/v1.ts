@@ -13,6 +13,8 @@ import { enrichedJourneyMatch } from '@/server/HAFAS/JourneyMatch';
 import {
   findJourney,
   findJourneyHafasCompatible,
+  getJourneyDetails,
+  health,
 } from '@/external/risJourneys';
 import {
   getCategoryAndNumberFromName,
@@ -20,6 +22,7 @@ import {
 } from '@/server/journeys/journeyDetails';
 import Detail from '@/server/HAFAS/Detail';
 import type { EvaNumber } from '@/types/common';
+import type { JourneyEventBased } from '@/external/generated/risJourneys';
 import type { Request as KoaRequest } from 'koa';
 import type { ParsedJourneyMatchResponse } from '@/types/HAFAS/JourneyMatch';
 import type { ParsedSearchOnTripResponse } from '@/types/HAFAS/SearchOnTrip';
@@ -34,6 +37,17 @@ export function isAllowed(req: KoaRequest): boolean {
 @Route('/journeys/v1')
 export class JourneysV1Controller extends Controller {
   @Hidden()
+  @Get('/health')
+  health(
+    @Res() notFound: TsoaResponse<404, void>,
+    @Res() notAuthorized: TsoaResponse<401, void>,
+  ): Promise<any> {
+    if (health.has401) {
+      return notAuthorized(401);
+    }
+    return notFound(404);
+  }
+
   @Get('/find/number/{trainNumber}')
   @Tags('Journeys')
   async findNumber(
@@ -149,6 +163,25 @@ export class JourneysV1Controller extends Controller {
   }
 
   @Hidden()
+  @Get('/details/id/{journeyId}')
+  @Response(404)
+  @Tags('Journeys')
+  async idDetails(
+    @Request() req: KoaRequest,
+    @Res() res: TsoaResponse<401 | 404, unknown>,
+    journeyId: string,
+  ): Promise<JourneyEventBased> {
+    if (!isAllowed(req)) {
+      return res(401, 'This is rate-limited upstream, please do not use it.');
+    }
+    const journey = await getJourneyDetails(journeyId);
+    if (!journey) {
+      return res(404, undefined);
+    }
+    return journey;
+  }
+
+  @Hidden()
   @Get('/details/{trainName}')
   @Response(404)
   @Tags('Journeys')
@@ -165,6 +198,13 @@ export class JourneysV1Controller extends Controller {
   ): Promise<ParsedSearchOnTripResponse> {
     if (!isAllowed(req)) {
       return res(401, 'This is rate-limited upstream, please do not use it.');
+    }
+    if (journeyId) {
+      const journey = await journeyDetails(journeyId);
+      if (!journey) {
+        return res(404, undefined);
+      }
+      return journey;
     }
     const hafasDetailsPromise = Detail(
       trainName,
@@ -183,10 +223,6 @@ export class JourneysV1Controller extends Controller {
       }
       return hafasResult;
     };
-    if (journeyId) {
-      const journey = await journeyDetails(journeyId);
-      return journey || hafasFallback();
-    }
     const productDetails = getCategoryAndNumberFromName(trainName);
     if (!productDetails) {
       return hafasFallback();

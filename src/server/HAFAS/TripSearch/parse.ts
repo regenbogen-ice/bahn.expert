@@ -1,12 +1,13 @@
 import { adjustProductOperator } from '@/server/HAFAS/helper/adjustProductOperator';
 import { differenceInMilliseconds, parse } from 'date-fns';
+import { TransportType } from '@/external/types';
 import mergeSegments from '@/server/HAFAS/TripSearch/mergeSegments';
-import parseAuslastung from '../helper/parseAuslastung';
-import parseCommonArrival from '../helper/parseCommonArrival';
-import parseCommonDeparture from '../helper/parseCommonDeparture';
-import parseDuration from '../helper/parseDuration';
-import parseMessages from '../helper/parseMessages';
-import parseStop from '../helper/parseStop';
+import parseAuslastung from '@/server/HAFAS/helper/parseAuslastung';
+import parseCommonArrival from '@/server/HAFAS/helper/parseCommonArrival';
+import parseCommonDeparture from '@/server/HAFAS/helper/parseCommonDeparture';
+import parseDuration from '@/server/HAFAS/helper/parseDuration';
+import parseMessages from '@/server/HAFAS/helper/parseMessages';
+import parseStop from '@/server/HAFAS/helper/parseStop';
 import parseTarif from '@/server/HAFAS/helper/parseTarif';
 import type {
   CommonStop,
@@ -23,9 +24,9 @@ import type {
 } from '@/types/HAFAS/TripSearch';
 import type { MinimalStopPlace } from '@/types/stopPlace';
 import type {
-  Route$Journey,
-  Route$JourneySegment,
-  Route$Stop,
+  RouteJourney,
+  RouteJourneySegment,
+  RouteStop,
   RoutingResult,
   SingleRoute,
 } from '@/types/routing';
@@ -40,8 +41,8 @@ function parseFullStation(fullStation: string): MinimalStopPlace {
   let name = '';
   let evaNumber = '';
 
-  if (titleMatch && titleMatch[1]) name = titleMatch[1];
-  if (idMatch && idMatch[1]) evaNumber = idMatch[1].padStart(7, '0');
+  if (titleMatch?.[1]) name = titleMatch[1];
+  if (idMatch?.[1]) evaNumber = idMatch[1].padStart(7, '0');
 
   return {
     name,
@@ -51,7 +52,7 @@ function parseFullStation(fullStation: string): MinimalStopPlace {
 
 function adjustToFirstTrain(
   departure: CommonStopInfo,
-  segments: Route$JourneySegment[],
+  segments: RouteJourneySegment[],
 ) {
   if (segments.length && segments[0].type !== 'JNY') {
     const firstTrainSegment = segments.find((s) => s.type === 'JNY');
@@ -64,7 +65,7 @@ function adjustToFirstTrain(
 
 function adjustToLastTrain(
   arrival: CommonStopInfo,
-  segments: Route$JourneySegment[],
+  segments: RouteJourneySegment[],
 ) {
   if (segments.length && segments.at(-1)!.type !== 'JNY') {
     const allTrainSegments = segments.filter((s) => s.type === 'JNY');
@@ -81,14 +82,17 @@ const AllowedLegTypes = new Set(['JNY', 'WALK', 'TRSF']);
 
 export class Journey {
   private date: Date;
-  constructor(private raw: OutConL, private common: ParsedCommon) {
+  constructor(
+    private raw: OutConL,
+    private common: ParsedCommon,
+  ) {
     this.date = parse(raw.date, 'yyyyMMdd', new Date());
   }
   parseJourney = (): Promise<SingleRoute> => {
     const allSegments = this.raw.secL
       .filter((leg) => AllowedLegTypes.has(leg.type))
       .map(this.parseSegment)
-      .filter<Route$JourneySegment>(Boolean as any);
+      .filter<RouteJourneySegment>(Boolean as any);
 
     const segments = mergeSegments(allSegments);
 
@@ -121,12 +125,12 @@ export class Journey {
   private parseStops = (
     stops: CommonStop[] | undefined,
     train: ParsedProduct,
-  ): Route$Stop[] => {
+  ): RouteStop[] => {
     if (!stops) return [];
 
     return stops.map((stop) => parseStop(stop, this.common, this.date, train));
   };
-  private parseSegmentJourney = (jny: Jny): Route$Journey => {
+  private parseSegmentJourney = (jny: Jny): RouteJourney => {
     // eslint-disable-next-line unicorn/no-unreadable-array-destructuring
     const [, fullStart, fullDestination, , , , , , ,] = jny.ctxRecon.split('$');
     const product = this.common.prodL[jny.prodX];
@@ -145,7 +149,7 @@ export class Journey {
       messages: parseMessages(jny.msgL, this.common),
     };
   };
-  private parseSegment = (t: SecL): undefined | Route$JourneySegment => {
+  private parseSegment = (t: SecL): undefined | RouteJourneySegment => {
     switch (t.type) {
       case 'JNY': {
         const arrival = parseCommonArrival(
@@ -188,6 +192,7 @@ export class Journey {
           train: {
             name: 'Fußweg',
             type: 'Fußweg',
+            transportType: TransportType.Walk,
           },
           arrival: parseCommonArrival(t.arr, this.date, this.common),
           departure: parseCommonDeparture(t.dep, this.date, this.common),

@@ -3,7 +3,7 @@ import Axios from 'axios';
 import constate from 'constate';
 import type { Abfahrt } from '@/types/iris';
 import type { PropsWithChildren } from 'react';
-import type { Route$Auslastung } from '@/types/routing';
+import type { RouteAuslastung } from '@/types/routing';
 import type { TrainOccupancyList } from '@/types/stopPlace';
 
 function getAuslastungKey(abfahrt: Abfahrt) {
@@ -13,19 +13,19 @@ function getAuslastungKey(abfahrt: Abfahrt) {
 }
 
 function useAuslastungInner(_p: PropsWithChildren<unknown>) {
-  const [auslastungen, setAuslastungen] = useState<{
-    [key: string]: undefined | null | Route$Auslastung;
-  }>({});
+  const [auslastungen, setAuslastungen] = useState<
+    Record<string, undefined | null | RouteAuslastung>
+  >({});
   const fetchDBAuslastung = useCallback(async (abfahrt: Abfahrt) => {
     if (!abfahrt.departure) {
       return;
     }
     const key = getAuslastungKey(abfahrt);
-    let auslastung: Route$Auslastung | null;
+    let auslastung: RouteAuslastung | null;
 
     try {
       auslastung = (
-        await Axios.get<Route$Auslastung>(
+        await Axios.get<RouteAuslastung>(
           `/api/hafas/v3/occupancy/${key}/${abfahrt.departure?.scheduledTime.toISOString()}/${
             abfahrt.currentStopPlace.evaNumber
           }`,
@@ -41,9 +41,9 @@ function useAuslastungInner(_p: PropsWithChildren<unknown>) {
     }));
   }, []);
 
-  const [vrrAuslastungen, setVRRAuslastungen] = useState<{
-    [evaNumber: string]: undefined | null | TrainOccupancyList;
-  }>({});
+  const [vrrAuslastungen, setVRRAuslastungen] = useState<
+    Record<string, undefined | null | TrainOccupancyList>
+  >({});
 
   const getAuslastung = useCallback(
     (abfahrt: Abfahrt) => {

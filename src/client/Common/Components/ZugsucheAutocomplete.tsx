@@ -1,17 +1,16 @@
 import { journeyNumberFind } from '@/client/Common/service/details';
 import { Loading, LoadingType } from '@/client/Common/Components/Loading';
-import { MenuItem, Paper, TextField } from '@mui/material';
+import { MenuItem, Paper, styled, TextField } from '@mui/material';
 import { useCallback, useState } from 'react';
 import Axios from 'axios';
 import debounce from 'debounce-promise';
 import Downshift from 'downshift';
-import styled from '@emotion/styled';
-import type { FC } from 'react';
+import type { ChangeEventHandler, FC, FocusEventHandler } from 'react';
 import type { ParsedJourneyMatchResponse } from '@/types/HAFAS/JourneyMatch';
 
 const debouncedJourneyNumberFind = debounce(journeyNumberFind, 200);
 
-const Container = styled.div`
+const Container = styled('div')`
   position: relative;
   margin: 20px;
 
@@ -96,22 +95,22 @@ export const ZugsucheAutocomplete: FC<Props> = ({
           openMenu,
         }) => {
           const { onBlur, onChange, onFocus, ...inputProps } = getInputProps({
-            onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+            onChange: ((event) => {
               if (event.target.value === '') {
                 clearSelection();
               } else {
                 void loadOptions(event.target.value);
               }
-            },
-            onFocus: () => {
+            }) as ChangeEventHandler<HTMLInputElement>,
+            onFocus: (() => {
               if (suggestions.length) {
                 openMenu();
               }
-            },
-            onBlur: () => {
+            }) as FocusEventHandler<HTMLInputElement>,
+            onBlur: (() => {
               openMenu();
               setSuggestions([]);
-            },
+            }) as FocusEventHandler<HTMLInputElement>,
           });
 
           return (
@@ -151,6 +150,7 @@ export const ZugsucheAutocomplete: FC<Props> = ({
                             {...itemProps}
                             key={suggestion.jid}
                             selected={highlighted}
+                            // @ts-expect-error ???
                             component="div"
                           >
                             {suggestion.train.name} -&gt;
@@ -160,7 +160,7 @@ export const ZugsucheAutocomplete: FC<Props> = ({
                         );
                       })
                     ) : (
-                      <StyledMenuItem>
+                      <StyledMenuItem key="loading">
                         {loading ? 'Loading...' : 'No Matching Trains'}
                       </StyledMenuItem>
                     )}

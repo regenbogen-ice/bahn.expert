@@ -1,8 +1,4 @@
-import type {
-  CommonProductInfo,
-  CommonStopInfo,
-  HafasStation,
-} from '@/types/HAFAS';
+import type { CommonProductInfo, CommonStopInfo } from '@/types/HAFAS';
 import type { MinimalStopPlace } from '@/types/stopPlace';
 
 export interface IrisStationWithRelated {
@@ -57,6 +53,7 @@ export interface AbfahrtenResult {
 }
 
 export interface Abfahrt {
+  journeyId?: string;
   initialDeparture: Date;
   /**
    * evaNumber of first stopPlace in route
@@ -88,6 +85,7 @@ export interface Abfahrt {
   scheduledDestination: string;
   scheduledPlatform: string;
   substitute?: boolean;
+  substituted?: boolean;
   train: TrainInfo;
   /**
    * Sofern Durchbindung passiert ist steht hier der vorherige Transport drin. Is fachlich ultra hacky.
@@ -105,7 +103,9 @@ export interface IrisMessage {
 
 export interface HimIrisMessage extends IrisMessage {
   head: string;
-  stopPlace?: HafasStation;
+  short?: string;
+  stopPlaceInfo?: string;
+  source?: string;
 }
 
 export type Message = IrisMessage | HimIrisMessage;
@@ -116,7 +116,6 @@ export type Message = IrisMessage | HimIrisMessage;
 
 export type MessagePrio = '1' | '2' | '3' | '4';
 export interface Messages {
-  [name: string]: Message[];
   qos: IrisMessage[];
   delay: IrisMessage[];
   him: HimIrisMessage[];
@@ -135,11 +134,8 @@ export interface StopInfo extends CommonStopInfo {
   transition?: string;
 }
 
-export interface SubstituteRef {
-  trainNumber: string;
-  trainType: string;
-  train: string;
-}
+export interface SubstituteRef
+  extends Pick<TrainInfo, 'number' | 'type' | 'name'> {}
 
 export interface Stop {
   additional?: boolean;
@@ -156,6 +152,4 @@ export interface TrainInfo extends CommonProductInfo {
 /**
  * Map of "mediumId" to Abfahrt.
  */
-export interface Wings {
-  [mediumId: string]: Abfahrt;
-}
+export type Wings = Record<string, Abfahrt>;

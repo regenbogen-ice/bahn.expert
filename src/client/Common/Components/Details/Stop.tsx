@@ -1,17 +1,19 @@
 import { AuslastungsDisplay } from '@/client/Common/Components/AuslastungsDisplay';
+import { CoachSequence } from '../CoachSequence/CoachSequence';
 import { DetailMessages } from '../Messages/Detail';
 import { Messages } from './Messages';
 import { Platform } from '@/client/Common/Components/Platform';
-import { Reihung } from '../Reihung';
+import { Stack, styled } from '@mui/material';
 import { StopPlaceLink } from '@/client/Common/Components/StopPlaceLink';
+import { themeMixins } from '@/client/Themes/mixins';
 import { Time } from '@/client/Common/Components/Time';
+import { TravelsWith } from '@/client/Common/Components/Details/TravelsWith';
 import { TravelynxLink } from '@/client/Common/Components/CheckInLink/TravelynxLink';
 import { useCallback, useMemo } from 'react';
 import { useDetails } from '@/client/Common/provider/DetailsProvider';
-import styled from '@emotion/styled';
 import type { FC, MouseEvent } from 'react';
 import type { ParsedProduct } from '@/types/HAFAS';
-import type { Route$Stop } from '@/types/routing';
+import type { RouteStop } from '@/types/routing';
 
 const ArrivalTime = styled(Time)`
   grid-area: ar;
@@ -21,7 +23,7 @@ const DepartureTime = styled(Time)`
   grid-area: dp;
 `;
 
-const StopName = styled.span<{ stop: Route$Stop }>(
+const StopName = styled('span')<{ stop: RouteStop }>(
   {
     gridArea: 't',
     overflow: 'hidden',
@@ -30,11 +32,12 @@ const StopName = styled.span<{ stop: Route$Stop }>(
       color: 'inherit',
     },
   },
-  ({ theme, stop: { additional } }) => additional && theme.mixins.additional,
-  ({ theme, stop: { cancelled } }) => cancelled && theme.mixins.cancelled,
+  ({ theme, stop: { additional } }) =>
+    additional && themeMixins.additional(theme),
+  ({ theme, stop: { cancelled } }) => cancelled && themeMixins.cancelled(theme),
 );
 
-const ScrollMarker = styled.div`
+const ScrollMarker = styled('div')`
   position: absolute;
   top: -64px;
 `;
@@ -47,15 +50,15 @@ const DeparturePlatform = styled(Platform)`
   grid-area: depP;
 `;
 
-const ReihungContainer = styled.div`
+const CoachSequenceContainer = styled('div')`
   grid-area: wr;
   font-size: 0.5em;
   overflow: hidden;
 `;
 
-const MessageContainer = styled.div`
+const MessageContainer = styled('div')`
   grid-area: m;
-  padding-left: 0.75em;
+  padding-left: 1em;
 `;
 
 const StyledTravelynxLink = styled(TravelynxLink)`
@@ -66,7 +69,7 @@ const StyledOccupancy = styled(AuslastungsDisplay)`
   grid-area: o;
 `;
 
-const Container = styled.div<{
+const Container = styled('div')<{
   past?: boolean;
   hasOccupancy: boolean;
   samePlatform: boolean;
@@ -78,24 +81,25 @@ const Container = styled.div<{
     gridTemplateRows: '1fr',
     gridTemplateAreas: `"ar t ${samePlatform ? 'depP' : 'arrP'} c" "dp ${
       hasOccupancy ? 'o' : 't'
-    } depP c" "wr wr wr wr" "m m m m"`,
+    } depP c" "tw tw tw tw" "wr wr wr wr" "m m m m"`,
     alignItems: 'center',
-    borderBottom: `1px solid ${theme.palette.text.primary}`,
+    borderBottom: `1px solid ${theme.vars.palette.text.primary}`,
     position: 'relative',
     gridTemplateColumns: `4.8em 1fr max-content`,
   }),
   ({ theme, past }) =>
-    past && { backgroundColor: theme.colors.shadedBackground },
+    past && { backgroundColor: theme.vars.palette.common.shadedBackground },
 );
 
 interface Props {
-  stop: Route$Stop;
+  stop: RouteStop;
   train?: ParsedProduct;
   showWR?: ParsedProduct;
   isPast?: boolean;
   initialDepartureDate?: Date;
-  onStopClick?: (stop: Route$Stop) => void;
+  onStopClick?: (stop: RouteStop) => void;
   doNotRenderOccupancy?: boolean;
+  lastArrivalEva?: string;
 }
 export const Stop: FC<Props> = ({
   stop,
@@ -105,6 +109,7 @@ export const Stop: FC<Props> = ({
   initialDepartureDate,
   onStopClick,
   doNotRenderOccupancy,
+  lastArrivalEva,
 }) => {
   const { urlPrefix, additionalInformation } = useDetails();
   const occupancy = useMemo(
@@ -120,11 +125,13 @@ export const Stop: FC<Props> = ({
       arrival: {
         real: stop.arrival?.platform,
         scheduled: stop.arrival?.scheduledPlatform,
+        cancelled: stop.arrival?.cancelled,
       },
       departure: {
         real: stop.departure?.platform || stop.arrival?.platform,
         scheduled:
           stop.departure?.scheduledPlatform || stop.arrival?.scheduledPlatform,
+        cancelled: stop.departure?.cancelled,
       },
     };
     return [
@@ -153,6 +160,7 @@ export const Stop: FC<Props> = ({
       <ScrollMarker id={stop.station.evaNumber} />
       {stop.arrival && (
         <ArrivalTime
+          isPlan={stop.arrival.isPlan}
           cancelled={stop.arrival.cancelled}
           real={stop.arrival.time}
           delay={stop.arrival.delay}
@@ -179,24 +187,33 @@ export const Stop: FC<Props> = ({
           real={stop.departure.time}
           delay={stop.departure.delay}
           isRealTime={stop.departure.isRealTime}
+          isPlan={stop.departure.isPlan}
         />
       )}
       <DeparturePlatform {...platforms.departure} />
       {!samePlatform && <ArrivalPlatform {...platforms.arrival} />}
+      <Stack gridArea="tw" paddingLeft={1}>
+        <TravelsWith
+          stopEva={stop.station.evaNumber}
+          joinsWith={stop.joinsWith}
+          splitsWith={stop.splitsWith}
+        />
+      </Stack>
       {/* {stop.messages && <div>{stop.messages.map(m => m.txtN)}</div>} */}
-      <ReihungContainer>
+      <CoachSequenceContainer>
         {showWR?.number && depOrArrival && (
-          <Reihung
+          <CoachSequence
             trainNumber={showWR.number}
             trainCategory={showWR.type}
             currentEvaNumber={stop.station.evaNumber}
             scheduledDeparture={depOrArrival.scheduledTime}
             initialDeparture={initialDepartureDate}
+            lastArrivalEva={lastArrivalEva}
             administration={train?.admin}
             loadHidden={!depOrArrival?.reihung}
           />
         )}
-      </ReihungContainer>
+      </CoachSequenceContainer>
       <MessageContainer>
         {stop.irisMessages && <DetailMessages messages={stop.irisMessages} />}
         <Messages messages={stop.messages} />

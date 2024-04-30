@@ -1,4 +1,8 @@
 describe('Abfahrten Settings', () => {
+  // For some reason Dates are rendered wrong without this (main branch show only time, branches show Date + time)
+  beforeEach(() => {
+    cy.clock(0, ['Date']);
+  });
   describe('on Abfahrten Page', () => {
     beforeEach(() => {
       cy.visit('/');
@@ -19,11 +23,11 @@ describe('Abfahrten Settings', () => {
       cy.percySnapshot('Zugnummer & Linie');
     });
 
-    describe('Reihung', () => {
+    describe('CoachSequence', () => {
       beforeEach(() => {
         cy.intercept(
           {
-            url: '/api/reihung/v4/wagen/371?*',
+            url: '/api/coachSequence/v4/wagen/371?*',
             query: {
               evaNumber: '8000105',
               departure: '2019-08-07T12:50:00.000Z',
@@ -40,7 +44,7 @@ describe('Abfahrten Settings', () => {
       it('Show fahrzeuggruppe', () => {
         cy.findByTestId('fahrzeugGruppeConfig').click();
         cy.closeModal();
-        cy.findByTestId('reihungFahrzeugGruppe').should('exist');
+        cy.findByTestId('coachSequenceCoachGroup').should('exist');
         cy.percySnapshot('Fahrzeuggruppe');
       });
 

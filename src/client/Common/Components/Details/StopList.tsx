@@ -1,13 +1,13 @@
-import { css } from '@emotion/react';
+import { css, Stack, styled } from '@mui/material';
 import { Error } from '@mui/icons-material';
 import { Loading } from '../Loading';
 import { Stop } from '@/client/Common/Components/Details/Stop';
+import { TravelsWithSummary } from '@/client/Common/Components/Details/TravelsWithSummary';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDetails } from '@/client/Common/provider/DetailsProvider';
-import styled from '@emotion/styled';
 import type { AxiosError } from 'axios';
 import type { FC } from 'react';
-import type { Route$Stop } from '@/types/routing';
+import type { RouteStop } from '@/types/routing';
 
 function getErrorText(error: AxiosError) {
   if (error.code === 'ECONNABORTED') return 'Timeout, bitte neuladen.';
@@ -18,11 +18,6 @@ function getErrorText(error: AxiosError) {
   return 'Unbekannter Fehler';
 }
 
-const Container = styled.main`
-  display: flex;
-  flex-direction: column;
-`;
-
 const ErrorStyle = css`
   width: 80%;
   height: 80%;
@@ -30,7 +25,6 @@ const ErrorStyle = css`
   text-align: center;
 `;
 
-const ErrorContainer = styled(Container)(ErrorStyle);
 const ErrorIcon = styled(Error)(ErrorStyle);
 
 export const StopList: FC = () => {
@@ -39,12 +33,12 @@ export const StopList: FC = () => {
     details?.currentStop?.station.evaNumber,
   );
 
-  const onStopClick = useCallback((stop: Route$Stop) => {
+  const onStopClick = useCallback((stop: RouteStop) => {
     setCurrentSequenceStop(stop.station.evaNumber);
   }, []);
 
   useEffect(() => {
-    if (details && details.currentStop) {
+    if (details?.currentStop) {
       setCurrentSequenceStop(details.currentStop.station.evaNumber);
       const scrollDom = document.getElementById(
         details.currentStop.station.evaNumber,
@@ -61,7 +55,10 @@ export const StopList: FC = () => {
     let hadCurrent = false;
 
     return details.stops.map((s) => {
-      if (details.currentStop?.station.evaNumber === s.station.evaNumber) {
+      if (
+        details.currentStop?.station.evaNumber === s.station.evaNumber ||
+        !details.currentStop
+      ) {
         hadCurrent = true;
       }
 
@@ -77,6 +74,7 @@ export const StopList: FC = () => {
               ? details.train
               : undefined
           }
+          lastArrivalEva={details.segmentDestination.evaNumber}
           initialDepartureDate={initialDepartureDate}
         />
       );
@@ -85,9 +83,9 @@ export const StopList: FC = () => {
 
   if (error) {
     return (
-      <ErrorContainer>
+      <Stack css={ErrorStyle}>
         <ErrorIcon data-testid="error" /> {getErrorText(error)}
-      </ErrorContainer>
+      </Stack>
     );
   }
 
@@ -96,9 +94,9 @@ export const StopList: FC = () => {
   }
 
   return (
-    <Container>
-      {/* <Messages messages={details.messages} /> */}
+    <Stack>
+      <TravelsWithSummary stops={details.stops} />
       {detailsStops}
-    </Container>
+    </Stack>
   );
 };

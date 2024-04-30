@@ -1,46 +1,79 @@
 import { additionalJourneyInformation } from '@/server/journeys/additionalJourneyInformation';
-import { addUseragent } from '@/external/randomUseragent';
+import {
+  addUseragent,
+  getRandomOfArray,
+  randomBahnhofLiveUseragent,
+} from '@/external/randomUseragent';
+import { axiosUpstreamInterceptor } from '@/server/admin';
 import { Cache, CacheDatabase } from '@/server/cache';
 import { differenceInHours, format } from 'date-fns';
 import { JourneysApi, TransportType } from '@/external/generated/risJourneys';
-import { risJourneysConfiguration } from '@/external/config';
-import { upstreamApiCountInterceptor } from '@/server/admin';
+import { logger } from '@/server/logger';
+import { Configuration as RisJourneysConfiguration } from '@/external/generated/risJourneys';
 import axios from 'axios';
 import type {
   JourneyEventBased,
   JourneyMatch,
-  StationShort,
+  StopPlaceEmbedded,
   TransportPublic,
 } from '@/external/generated/risJourneys';
 import type { ParsedJourneyMatchResponse } from '@/types/HAFAS/JourneyMatch';
 import type { ParsedProduct } from '@/types/HAFAS';
-import type { Route$Stop } from '@/types/routing';
+import type { RouteStop } from '@/types/routing';
 
-const journeyFindCache = new Cache<string, JourneyMatch[]>(
-  CacheDatabase.JourneyFind,
-  18 * 60 * 60,
+const getRisJourneysConfiguration = (
+  clientId: string,
+  clientSecret: string,
+): RisJourneysConfiguration =>
+  new RisJourneysConfiguration({
+    basePath: process.env.RIS_JOURNEYS_URL,
+    baseOptions: {
+      headers: {
+        'DB-Api-Key': clientSecret,
+        'DB-Client-Id': clientId,
+      },
+    },
+  });
+
+const journeyFindCache = new Cache<JourneyMatch[]>(CacheDatabase.JourneyFind);
+
+const journeyCache = new Cache<JourneyEventBased>(CacheDatabase.Journey);
+
+logger.info(
+  `using ${process.env.RIS_JOURNEYS_USER_AGENT} as RIS::Journeys UserAgent`,
 );
 
-const axiosWithTimeout = axios.create({
-  timeout: 4500,
-});
-axiosWithTimeout.interceptors.request.use(
-  addUseragent.bind(
+export const health = {
+  has401: false,
+};
+
+const keys: [string, string, number, string][] = JSON.parse(
+  process.env.RIS_JOURNEYS_KEYS || '[]',
+);
+
+const clients: JourneysApi[] = [];
+
+for (const [clientId, clientSecret, weight, name] of keys) {
+  const axiosInstance = axios.create({
+    timeout: 6500,
+  });
+  if (name === 'live') {
+    axiosInstance.interceptors.request.use(
+      addUseragent.bind(undefined, randomBahnhofLiveUseragent),
+    );
+  }
+  axiosUpstreamInterceptor(axiosInstance, `ris-journeys-${name}`);
+  const client = new JourneysApi(
+    getRisJourneysConfiguration(clientId, clientSecret),
     undefined,
-    process.env.RIS_JOURNEYS_USER_AGENT
-      ? () => process.env.RIS_JOURNEYS_USER_AGENT!
-      : undefined,
-  ),
-);
-axiosWithTimeout.interceptors.request.use(
-  upstreamApiCountInterceptor.bind(undefined, 'ris-journeys'),
-);
+    axiosInstance,
+  );
+  for (let i = 0; i <= weight; i += 1) {
+    clients.push(client);
+  }
+}
 
-const risJourneysClient = new JourneysApi(
-  risJourneysConfiguration,
-  undefined,
-  axiosWithTimeout,
-);
+const getJourneyClient = () => getRandomOfArray(clients);
 
 const longDistanceTypes: TransportType[] = [
   TransportType.HighSpeedTrain,
@@ -56,9 +89,12 @@ const mapTransportToTrain = (transport: TransportPublic): ParsedProduct => ({
   line: transport.line,
   type: transport.category,
   number: `${transport.number}`,
+  transportType: transport.type,
 });
 
-const mapStationShortToRouteStops = (station: StationShort): Route$Stop => ({
+const mapStationShortToRouteStops = (
+  station: StopPlaceEmbedded,
+): RouteStop => ({
   station,
 });
 
@@ -89,7 +125,7 @@ export async function findJourney(
       return [];
     }
 
-    const cacheKey = `${trainNumber}|${category}|${
+    const cacheKey = `${trainNumber}|${category?.toUpperCase()}|${
       date && format(date, 'yyyy-MM-dd')
     }|${onlyFv ?? false}|${originEvaNumber}`;
 
@@ -97,7 +133,8 @@ export async function findJourney(
     if (cacheHit) {
       return cacheHit;
     }
-    const result = await risJourneysClient.find({
+
+    const result = await getJourneyClient().find({
       number: trainNumber,
       // Kategorie ist schwierig, wir filtern quasi optional
       // category,
@@ -117,7 +154,12 @@ export async function findJourney(
     }
 
     if (isWithin20Hours) {
-      void journeyFindCache.set(cacheKey, result.data.journeys);
+      void journeyFindCache.set(
+        cacheKey,
+        result.data.journeys,
+        // empty resultsets are cached for one Hour. Sometimes journeys are found later
+        result.data.journeys.length === 0 ? 'PT1H' : undefined,
+      );
     }
 
     for (const j of result.data.journeys) {
@@ -130,7 +172,10 @@ export async function findJourney(
     }
 
     return result.data.journeys;
-  } catch {
+  } catch (e) {
+    if (axios.isAxiosError(e) && e.response?.status === 401) {
+      health.has401 = true;
+    }
     return [];
   }
 }
@@ -150,13 +195,27 @@ export async function getJourneyDetails(
   journeyId: string,
 ): Promise<JourneyEventBased | undefined> {
   try {
-    const r = await risJourneysClient.journeyEventbasedById({
+    if (!process.env.RIS_JOURNEYS_CACHE_DISABLED) {
+      const cached = await journeyCache.get(journeyId);
+      if (cached) {
+        return cached;
+      }
+    }
+    const r = await getJourneyClient().journeyEventBasedById({
       journeyID: journeyId,
       includeJourneyReferences: true,
+      includeCanceled: true,
     });
 
+    if (!process.env.RIS_JOURNEYS_CACHE_DISABLED && r.data) {
+      void journeyCache.set(journeyId, r.data);
+    }
+
     return r.data;
-  } catch {
+  } catch (e) {
+    if (axios.isAxiosError(e) && e.response?.status === 401) {
+      health.has401 = true;
+    }
     return undefined;
   }
 }

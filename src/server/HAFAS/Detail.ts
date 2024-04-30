@@ -8,12 +8,12 @@ import searchOnTrip from './SearchOnTrip';
 import type { JourneyFilter } from '@/types/HAFAS';
 import type { ParsedJourneyMatchResponse } from '@/types/HAFAS/JourneyMatch';
 import type { ParsedSearchOnTripResponse } from '@/types/HAFAS/SearchOnTrip';
-import type { Route$JourneySegmentTrain, Route$Stop } from '@/types/routing';
+import type { RouteJourneySegmentTrain, RouteStop } from '@/types/routing';
 
 export function calculateCurrentStopPlace(
   segment: ParsedSearchOnTripResponse,
   currentStopId?: string,
-): Route$Stop | undefined {
+): RouteStop | undefined {
   const currentDate = Date.now();
   let currentStop;
 
@@ -25,7 +25,8 @@ export function calculateCurrentStopPlace(
 
   if (!currentStop) {
     currentStop = segment.stops.find((s) => {
-      const stopInfo = s.departure || s.arrival;
+      const stopInfo =
+        s.departure && !s.departure.cancelled ? s.departure : s.arrival;
 
       return (
         stopInfo && !stopInfo.cancelled && isAfter(stopInfo.time, currentDate)
@@ -147,7 +148,7 @@ export default async (
 
     relevantSegment = route.segments.find(
       (s) => s.type === 'JNY',
-    ) as Route$JourneySegmentTrain;
+    ) as RouteJourneySegmentTrain;
   } catch {
     // we keep using the JourneyDetailsOne
   }
@@ -170,7 +171,7 @@ export default async (
     );
   }
 
-  if (!lastStop || !lastStop.arrival || lastStop.arrival.delay == null) {
+  if (lastStop?.arrival?.delay == null) {
     for (const [index, stop] of relevantSegment.stops.entries()) {
       const jDetailStop = journeyDetails.stops[index];
 

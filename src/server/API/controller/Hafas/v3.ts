@@ -11,18 +11,31 @@ import {
   Route,
   Tags,
 } from '@tsoa/runtime';
+import { locMatch } from '@/server/HAFAS/LocMatch';
 import { stopOccupancy } from '@/server/HAFAS/occupancy';
+import { tripSearch } from '@/server/HAFAS/TripSearch/TripSearch';
 import StationBoard from '@/server/HAFAS/StationBoard';
 import StationBoardToTimetables from '@/server/HAFAS/StationBoard/StationBoardToTimetables';
-import TripSearch from '@/server/HAFAS/TripSearch';
 import type { AbfahrtenResult } from '@/types/iris';
 import type { AdditionalJourneyInformation } from '@/types/HAFAS/JourneyDetails';
-import type { AllowedHafasProfile } from '@/types/HAFAS';
-import type { ArrivalStationBoardEntry } from '@/types/stationBoard';
+import type {
+  AllowedHafasProfile,
+  HafasResponse,
+  HafasStation,
+} from '@/types/HAFAS';
+import type {
+  ArrivalStationBoardEntry,
+  StationBoardEntry,
+} from '@/types/stationBoard';
 import type { Request as KRequest } from 'koa';
-import type { Route$Auslastung, RoutingResult } from '@/types/routing';
+import type { LocMatchResponse } from '@/types/HAFAS/LocMatch';
+import type { RouteAuslastung, RoutingResult } from '@/types/routing';
+import type { StationBoardResponse } from '@/types/HAFAS/StationBoard';
 import type { TripSearchOptionsV3 } from '@/types/HAFAS/TripSearch';
 import type { TsoaResponse } from '@tsoa/runtime';
+
+// Complex Input Parameter need to be their own type to generate correctly
+type InputTripSearchOptionsV3 = TripSearchOptionsV3;
 
 @Route('/hafas/v3')
 export class HafasControllerV3 extends Controller {
@@ -35,10 +48,10 @@ export class HafasControllerV3 extends Controller {
   @OperationId('TripSearch v3')
   tripSearch(
     @Request() req: KRequest,
-    @Body() body: TripSearchOptionsV3,
+    @Body() body: InputTripSearchOptionsV3,
     @Query() profile?: AllowedHafasProfile,
   ): Promise<RoutingResult> {
-    return TripSearch(body, profile, Boolean(req.query.raw));
+    return tripSearch(body, profile, Boolean(req.query.raw));
   }
 
   @Get('/additionalInformation/{trainName}/{journeyId}')
@@ -93,7 +106,7 @@ export class HafasControllerV3 extends Controller {
     plannedDepartureTime: Date,
     trainNumber: string,
     stopEva: string,
-  ): Promise<Route$Auslastung> {
+  ): Promise<RouteAuslastung> {
     const foundOccupancy = await stopOccupancy(
       start,
       destination,
@@ -102,6 +115,66 @@ export class HafasControllerV3 extends Controller {
       stopEva,
     );
     return foundOccupancy || notFoundResponse(404);
+  }
+
+  @Get('/departures/{evaNumber}')
+  @Tags('HAFAS')
+  async departures(
+    evaNumber: string,
+    @Query() profile?: AllowedHafasProfile,
+  ): Promise<StationBoardEntry[]> {
+    const departures = await StationBoard(
+      {
+        type: 'DEP',
+        station: evaNumber,
+      },
+      profile,
+    );
+
+    return departures;
+  }
+
+  @Get('/departures/{evaNumber}/raw')
+  @Tags('HAFAS')
+  async departuresRaw(
+    evaNumber: string,
+    @Query() profile?: AllowedHafasProfile,
+  ): Promise<HafasResponse<StationBoardResponse>> {
+    const departures = await StationBoard(
+      {
+        type: 'DEP',
+        station: evaNumber,
+      },
+      profile,
+      true,
+    );
+
+    // @ts-expect-error works
+    return departures;
+  }
+
+  @Get('/stopPlaceSearch/{query}')
+  @Tags('HAFAS')
+  @OperationId('HafasStopPlaceSearch')
+  async stopPlaceSearch(
+    query: string,
+    @Query() profile?: AllowedHafasProfile,
+  ): Promise<HafasStation[]> {
+    const result = await locMatch(query, 'S', profile);
+
+    return result;
+  }
+
+  @Get('/stopPlaceSearch/{query}/raw')
+  @Tags('HAFAS')
+  async stopPlaceSearchRaw(
+    query: string,
+    @Query() profile?: AllowedHafasProfile,
+  ): Promise<HafasResponse<LocMatchResponse>> {
+    const result = await locMatch(query, 'S', profile, true);
+
+    // @ts-expect-error works
+    return result;
   }
 
   @Get('/irisCompatibleAbfahrten/{evaId}')
@@ -127,12 +200,7 @@ export class HafasControllerV3 extends Controller {
 
     const mappedHafasArrivals =
       hafasArrivals?.reduce(
-        (
-          map: {
-            [key: string]: ArrivalStationBoardEntry;
-          },
-          arrival,
-        ) => {
+        (map: Record<string, ArrivalStationBoardEntry>, arrival) => {
           map[`${arrival.jid}${arrival.train.number}`] = arrival;
 
           return map;

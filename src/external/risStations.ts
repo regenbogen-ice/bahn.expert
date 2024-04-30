@@ -1,11 +1,11 @@
-import { risStationsConfiguration } from '@/external/config';
+import { axiosUpstreamInterceptor } from '@/server/admin';
+import { Configuration as RisStationsConfiguration } from '@/external/generated/risStations';
 import {
   StopPlaceKeyFilter,
   StopPlacesApi,
   StopPlaceSearchGroupByKey,
 } from '@/external/generated/risStations';
 import { TransportType } from '@/external/types';
-import { upstreamApiCountInterceptor } from '@/server/admin';
 import axios from 'axios';
 import type {
   ResolvedStopPlaceGroups,
@@ -14,7 +14,18 @@ import type {
   StopPlaceSearchResult,
 } from '@/external/types';
 
-const nonÖPNVTypes: Set<TransportType> = new Set([
+const risStationsConfiguration = new RisStationsConfiguration({
+  basePath: process.env.RIS_STATIONS_URL,
+  baseOptions: {
+    headers: {
+      'user-agent': process.env.USER_AGENT,
+      'DB-Api-Key': process.env.RIS_STATIONS_CLIENT_SECRET,
+      'DB-Client-Id': process.env.RIS_STATIONS_CLIENT_ID,
+    },
+  },
+});
+
+const nonÖPNVTypes = new Set<TransportType>([
   TransportType.HighSpeedTrain,
   TransportType.IntercityTrain,
   TransportType.InterRegionalTrain,
@@ -26,9 +37,7 @@ const axiosWithTimeout = axios.create({
   timeout: 15000,
 });
 
-axiosWithTimeout.interceptors.request.use(
-  upstreamApiCountInterceptor.bind(undefined, 'ris-stations'),
-);
+axiosUpstreamInterceptor(axiosWithTimeout, 'ris-stations');
 
 const stopPlaceClient = new StopPlacesApi(
   risStationsConfiguration,
@@ -81,7 +90,10 @@ export async function byRl100(rl100: string): Promise<StopPlace | undefined> {
   }
 }
 
-export async function byEva(evaNumber: string): Promise<StopPlace | undefined> {
+export async function byEva(
+  evaNumber: string,
+  forwardError?: boolean,
+): Promise<StopPlace | undefined> {
   try {
     const result = (
       await stopPlaceClient.getStopPlacesByEvaNumber({
@@ -90,7 +102,7 @@ export async function byEva(evaNumber: string): Promise<StopPlace | undefined> {
     ).data;
     return result.stopPlaces?.[0];
   } catch (e) {
-    if (axios.isAxiosError(e) && e.response?.status) {
+    if (forwardError && axios.isAxiosError(e) && e.response?.status) {
       throw e;
     }
     return undefined;

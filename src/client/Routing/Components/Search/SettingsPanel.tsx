@@ -4,7 +4,13 @@ import {
   AccordionSummary,
   Badge,
   Chip,
+  css,
+  FormControl,
   FormControlLabel,
+  MenuItem,
+  Select,
+  Stack,
+  styled,
   Switch,
   TextField,
 } from '@mui/material';
@@ -15,16 +21,16 @@ import {
   Timelapse,
   Train,
 } from '@mui/icons-material';
-import { css } from '@emotion/react';
+import { AllowedHafasProfile } from '@/types/HAFAS';
 import { NetzcardDisclaimer } from '@/client/Routing/Components/Search/NetzcardDisclaimer';
 import { useCallback, useMemo, useState } from 'react';
 import {
   useRoutingConfigActions,
   useRoutingSettings,
 } from '@/client/Routing/provider/RoutingConfigProvider';
-import styled from '@emotion/styled';
 import type { ChangeEvent, FC } from 'react';
 import type { RoutingSettings } from '@/client/Routing/provider/RoutingConfigProvider';
+import type { SelectChangeEvent } from '@mui/material';
 
 const StyledAccordion = styled(Accordion)`
   margin: 0 !important;
@@ -37,11 +43,6 @@ const StyledAccordionSummary = styled(AccordionSummary)`
     display: flex;
     justify-content: space-around;
   }
-`;
-
-const StyledAccordionDetails = styled(AccordionDetails)`
-  flex-direction: column;
-  display: flex;
 `;
 
 const FormLabel = styled(FormControlLabel)`
@@ -78,13 +79,20 @@ export const SettingsPanel: FC = () => {
     [updateSettings],
   );
 
+  const handleHafasProfile = useCallback(
+    (event: SelectChangeEvent) => {
+      // @ts-expect-error just sanitized
+      updateSettings('hafasProfile', event.target.value);
+    },
+    [updateSettings],
+  );
+
   const maxChangesBadeContent = useMemo(() => {
     const numberMaxChange = Number.parseInt(settings.maxChanges, 10);
     if (Number.isNaN(numberMaxChange) || numberMaxChange < 0) {
       return <AllInclusive fontSize="small" />;
     }
-    // This is needed because 0 will not be rendered. "0" will.
-    return settings.maxChanges;
+    return numberMaxChange.toString();
   }, [settings.maxChanges]);
 
   let filterLabel = 'Alle Zuege';
@@ -127,7 +135,7 @@ export const SettingsPanel: FC = () => {
             icon={<Train />}
           />
         </StyledAccordionSummary>
-        <StyledAccordionDetails>
+        <Stack component={AccordionDetails}>
           <FormLabel
             labelPlacement="start"
             control={
@@ -170,6 +178,26 @@ export const SettingsPanel: FC = () => {
             }
             label="Nur Regionalzüge"
           />
+          <FormControl size="small">
+            <FormLabel
+              labelPlacement="start"
+              control={
+                <Select
+                  value={settings.hafasProfile || ''}
+                  onChange={handleHafasProfile}
+                >
+                  <MenuItem value={AllowedHafasProfile.DB}>
+                    DB Navigator
+                  </MenuItem>
+                  <MenuItem value={AllowedHafasProfile.OEBB}>
+                    OEBB Scotty
+                  </MenuItem>
+                </Select>
+              }
+              label="Datenlieferant"
+            />
+          </FormControl>
+
           <FormLabel
             labelPlacement="start"
             control={
@@ -182,7 +210,7 @@ export const SettingsPanel: FC = () => {
             }
             label="Netzcard erlaubt"
           />
-        </StyledAccordionDetails>
+        </Stack>
       </StyledAccordion>
     </>
   );

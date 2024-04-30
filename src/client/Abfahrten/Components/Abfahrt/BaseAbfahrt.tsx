@@ -1,32 +1,21 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import { css } from '@emotion/react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import { css, Paper, Stack, styled } from '@mui/material';
 import { End } from './End';
-import { journeyNumberFind } from '@/client/Common/service/details';
 import { Mid } from './Mid';
-import { Paper } from '@mui/material';
 import { Start } from './Start';
 import { useSetSelectedDetail } from '@/client/Abfahrten/provider/SelectedDetailProvider';
 import loadable from '@loadable/component';
-import styled from '@emotion/styled';
 import type { Abfahrt } from '@/types/iris';
-import type { FallbackTrainsForCoachSequence } from '@/client/Common/provider/ReihungenProvider';
+import type { FallbackTrainsForCoachSequence } from '@/client/Common/provider/CoachSequenceProvider';
 import type { FC } from 'react';
 
-const LazyReihung = loadable(
-  () => import('@/client/Common/Components/Reihung'),
+const LazyCoachSequence = loadable(
+  () => import('../../../Common/Components/CoachSequence/CoachSequence'),
 );
 
 interface AbfahrtContextValues {
   abfahrt: Abfahrt;
   detail: boolean;
-  journeyId?: string;
 }
 
 // @ts-expect-error default context not needed
@@ -51,27 +40,28 @@ const Container = styled(Paper)`
   position: relative;
 `;
 
-const WingIndicator = styled.span<{ wingEnd?: boolean; wingStart?: boolean }>(
-  ({ wingEnd, wingStart, theme }) => ({
-    position: 'absolute',
-    borderLeft: `1px solid ${theme.palette.text.primary}`,
-    content: '" "',
-    left: '.3em',
-    top: wingStart ? 0 : '-1em',
-    bottom: wingEnd ? '.3em' : 0,
-    '&::before': wingStart
-      ? wingStartEnd(theme.palette.text.primary)
-      : undefined,
-    '&::after': wingEnd
-      ? css`
-          ${wingStartEnd(theme.palette.text.primary)};
-          bottom: 0;
-        `
-      : undefined,
-  }),
-);
+const WingIndicator = styled('span')<{
+  wingEnd?: boolean;
+  wingStart?: boolean;
+}>(({ wingEnd, wingStart, theme }) => ({
+  position: 'absolute',
+  borderLeft: `1px solid ${theme.vars.palette.text.primary}`,
+  content: '" "',
+  left: '.3em',
+  top: wingStart ? 0 : '-1em',
+  bottom: wingEnd ? '.3em' : 0,
+  '&::before': wingStart
+    ? wingStartEnd(theme.vars.palette.text.primary)
+    : undefined,
+  '&::after': wingEnd
+    ? css`
+        ${wingStartEnd(theme.vars.palette.text.primary)};
+        bottom: 0;
+      `
+    : undefined,
+}));
 
-const Entry = styled.div(({ theme }) => ({
+const Entry = styled('div')(({ theme }) => ({
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
@@ -83,11 +73,7 @@ const Entry = styled.div(({ theme }) => ({
   },
 }));
 
-const MainWrap = styled.div`
-  display: flex;
-`;
-
-const ScrollMarker = styled.div`
+const ScrollMarker = styled('div')`
   position: absolute;
   top: -64px;
 `;
@@ -116,38 +102,13 @@ export const BaseAbfahrt: FC<Props> = ({
   const handleClick = useCallback(() => {
     setSelectedDetail(abfahrt.id);
   }, [abfahrt.id, setSelectedDetail]);
-  const [journeyId, setJourneyId] = useState<string>();
   const contextValue = useMemo(
     () => ({
       detail,
       abfahrt,
-      journeyId,
     }),
-    [detail, abfahrt, journeyId],
+    [detail, abfahrt],
   );
-
-  useEffect(() => {
-    async function getJourney() {
-      if (!journeyId && detail) {
-        try {
-          const foundJourney = await journeyNumberFind(
-            abfahrt.train.number,
-            abfahrt.initialDeparture,
-            abfahrt.initialStopPlace,
-            false,
-            `detailsClick${abfahrt.train.number}`,
-            2,
-          );
-          if (foundJourney.length === 1) {
-            setJourneyId(foundJourney[0].jid);
-          }
-        } catch {
-          // we just ignore errors
-        }
-      }
-    }
-    void getJourney();
-  }, [detail, abfahrt, journeyId]);
 
   return (
     <AbfahrtContext.Provider value={contextValue}>
@@ -156,13 +117,13 @@ export const BaseAbfahrt: FC<Props> = ({
         <Entry
           data-testid={`abfahrt${abfahrt.train.type}${abfahrt.train.number}`}
         >
-          <MainWrap>
+          <Stack direction="row">
             <Start />
             <Mid />
             <End />
-          </MainWrap>
+          </Stack>
           {detail && abfahrt.departure && (
-            <LazyReihung
+            <LazyCoachSequence
               trainNumber={abfahrt.train.number}
               trainCategory={abfahrt.train.type}
               currentEvaNumber={abfahrt.currentStopPlace.evaNumber}

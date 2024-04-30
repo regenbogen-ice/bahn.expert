@@ -10,8 +10,9 @@ import constate from 'constate';
 import type { AdditionalJourneyInformation } from '@/types/HAFAS/JourneyDetails';
 import type { AxiosError } from 'axios';
 import type { HafasStation, ParsedPolyline } from '@/types/HAFAS';
+import type { MouseEvent } from 'react';
 import type { ParsedSearchOnTripResponse } from '@/types/HAFAS/SearchOnTrip';
-import type { Route$Auslastung, Route$Stop } from '@/types/routing';
+import type { RouteAuslastung, RouteStop } from '@/types/routing';
 
 interface Props {
   trainName: string;
@@ -35,6 +36,7 @@ const useInnerDetails = ({
 }: Props) => {
   const { autoUpdate } = useCommonConfig();
   const [isMapDisplay, setIsMapDisplay] = useState(false);
+  const [showMarkers, setShowMarkers] = useState(false);
   const [details, setDetails] = useState<ParsedSearchOnTripResponse>();
   const [additionalInformation, setAdditionalInformation] =
     useState<AdditionalJourneyInformation>();
@@ -92,12 +94,12 @@ const useInnerDetails = ({
         .then(async (details) => {
           setDetails(details);
           // its a RIS thing, lets get extra information
-          if (details.jid.includes('-')) {
+          if (details.journeyId) {
             try {
               setAdditionalInformation(
                 await getAdditionalJourneyInformation(
                   trainName,
-                  details.jid,
+                  details.journeyId,
                   initialDepartureDate,
                   evaNumberAlongRoute,
                 ),
@@ -106,7 +108,7 @@ const useInnerDetails = ({
               // ignoring this
             }
           } else {
-            const occupancy: Record<string, Route$Auslastung> = {};
+            const occupancy: Record<string, RouteAuslastung> = {};
             for (const s of details.stops) {
               if (s.auslastung) {
                 occupancy[s.station.evaNumber] = s.auslastung;
@@ -153,10 +155,15 @@ const useInnerDetails = ({
     [],
   );
 
+  const toggleShowMarkers = useCallback((e: MouseEvent) => {
+    e.preventDefault();
+    setShowMarkers((old) => !old);
+  }, []);
+
   const matchedPolyline:
     | (Omit<ParsedPolyline, 'locations'> & {
         locations: (HafasStation & {
-          details?: Route$Stop;
+          details?: RouteStop;
         })[];
       })
     | undefined = useMemo(() => {
@@ -188,6 +195,8 @@ const useInnerDetails = ({
     polyline: matchedPolyline,
     isMapDisplay,
     toggleMapDisplay,
+    showMarkers,
+    toggleShowMarkers,
     sameTrainDaysInFuture,
   };
 };

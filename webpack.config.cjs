@@ -6,6 +6,7 @@ const CompressionPlugin = require('compression-webpack-plugin');
 const LoadablePlugin = require('@loadable/webpack-plugin');
 const WorkboxPlugin = require('workbox-webpack-plugin');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+require('./scripts/adjustSwcrc.cjs');
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -19,6 +20,21 @@ const plugins = [
 ];
 const entry = ['./src/client/entry.ts'];
 
+const targets = require('browserslist').loadConfig({
+  path: __dirname,
+});
+const env = {
+  mode: 'entry',
+  targets: require('browserslist').loadConfig({
+    path: __dirname,
+  }),
+  coreJs: '3.36',
+};
+
+if (!process.env.SKIP_OLD_BROWSER) {
+  env.targets.push('ios 10');
+}
+
 const rules = [
   {
     test: /\.css$/,
@@ -28,10 +44,13 @@ const rules = [
     test: /\.(t|j)sx?$/,
     use: [
       {
-        loader: 'babel-loader',
+        loader: 'swc-loader',
         options: {
-          rootMode: 'upward',
-          plugins: isDev ? [require.resolve('react-refresh/babel')] : undefined,
+          parseMap: true,
+          module: {
+            type: 'es6',
+          },
+          env,
         },
       },
     ],

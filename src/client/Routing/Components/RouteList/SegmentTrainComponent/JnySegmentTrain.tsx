@@ -1,14 +1,14 @@
 import { AuslastungsDisplay } from '@/client/Common/Components/AuslastungsDisplay';
+import { CoachSequence } from '@/client/Common/Components/CoachSequence/CoachSequence';
 import { DetailsLink } from '@/client/Common/Components/Details/DetailsLink';
-import { Reihung } from '@/client/Common/Components/Reihung';
 import { segmentStyles } from './style';
 import { StopList } from '@/client/Routing/Components/RouteList/StopList';
 import { Tooltip } from '@mui/material';
 import type { FC, HTMLProps, MouseEvent } from 'react';
-import type { Route$JourneySegmentTrain } from '@/types/routing';
+import type { RouteJourneySegmentTrain } from '@/types/routing';
 
 interface Props extends HTMLProps<HTMLDivElement> {
-  segment: Route$JourneySegmentTrain;
+  segment: RouteJourneySegmentTrain;
   detail?: boolean;
   onTrainClick?: (e: MouseEvent) => void;
 }
@@ -31,18 +31,19 @@ export const JnySegmentTrain: FC<Props> = ({
         <span css={segmentStyles.margin}>
           <span>
             <Tooltip title={tooltipTitle ?? segment.train.name}>
-              <span>{segment.train.name}</span>
+              <DetailsLink
+                train={segment.train}
+                evaNumberAlongRoute={segment.segmentStart.evaNumber}
+                initialDeparture={segment.departure.scheduledTime}
+                jid={segment.jid}
+              >
+                {segment.train.name}
+              </DetailsLink>
             </Tooltip>
           </span>
         </span>
         <span css={[segmentStyles.margin, segmentStyles.destination]}>
           {segment.finalDestination}
-          <DetailsLink
-            train={segment.train}
-            evaNumberAlongRoute={segment.segmentStart.evaNumber}
-            initialDeparture={segment.departure.scheduledTime}
-            jid={segment.jid}
-          />
         </span>
         {segment.auslastung && (
           <AuslastungsDisplay auslastung={segment.auslastung} />
@@ -51,8 +52,8 @@ export const JnySegmentTrain: FC<Props> = ({
       {detail && (
         <>
           {segment.train.number && (
-            <Reihung
-              css={segmentStyles.reihung}
+            <CoachSequence
+              css={segmentStyles.sequence}
               trainNumber={segment.train.number}
               trainCategory={segment.train.type}
               currentEvaNumber={segment.segmentStart.evaNumber}

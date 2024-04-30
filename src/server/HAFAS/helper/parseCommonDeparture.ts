@@ -1,5 +1,5 @@
 import { differenceInMinutes } from 'date-fns';
-import checkReihung from './checkReihung';
+import checkCoachSequence from './checkCoachSequence';
 import parseTime from './parseTime';
 import type {
   CommonDeparture,
@@ -14,13 +14,13 @@ export default (
   _common: ParsedCommon,
   train?: ParsedProduct,
 ): CommonStopInfo => {
-  const scheduledTime = parseTime(date, d.dTimeS);
+  const scheduledTime = parseTime(date, d.dTimeS, d.dTZOffset);
 
   let time = scheduledTime;
   let delay;
 
   if (d.dTimeR) {
-    time = parseTime(date, d.dTimeR);
+    time = parseTime(date, d.dTimeR, d.dTZOffset);
     delay = time && scheduledTime && differenceInMinutes(time, scheduledTime);
   }
 
@@ -30,7 +30,7 @@ export default (
     scheduledTime,
     time,
     delay,
-    reihung: checkReihung(scheduledTime, d.dTrnCmpSX, train),
+    reihung: checkCoachSequence(scheduledTime, d.dTrnCmpSX, train),
     cancelled: d.dCncl,
     // messages: d.msgL ? parseMessages(d.msgL, common) : undefined,
   };

@@ -1,4 +1,4 @@
-import { css } from '@emotion/react';
+import { css } from '@mui/material';
 
 export const segmentStyles = {
   info: css`
@@ -15,7 +15,7 @@ export const segmentStyles = {
   destination: css`
     flex: 1;
   `,
-  reihung: css`
+  sequence: css`
     font-size: 0.5em;
   `,
 };

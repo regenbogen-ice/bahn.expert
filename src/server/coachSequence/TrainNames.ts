@@ -1,8 +1,6 @@
 // List from https://de.wikipedia.org/wiki/Liste_nach_Gemeinden_und_Regionen_benannter_IC/ICE-Fahrzeuge#Namensgebung_ICE-Triebz%C3%BCge_nach_Gemeinden
 
-const naming: {
-  [key: number]: string;
-} = {
+const naming: Record<number, string> = {
   // ICE 1 - BR 401
   101: 'Gießen',
   102: 'Jever',
@@ -13,13 +11,13 @@ const naming: {
   107: 'Plattling',
   108: 'Lichtenfels',
   110: 'Gelsenkirchen',
+  111: 'Nürnberg',
   112: 'Memmingen',
   113: 'Frankenthal/Pfalz',
   114: 'Friedrichshafen',
   115: 'Regensburg',
   116: 'Pforzheim',
   117: 'Hof',
-  118: 'Gelnhausen',
   119: 'Osnabrück',
   120: 'Lüneburg',
   152: 'Hanau',
@@ -273,6 +271,7 @@ const naming: {
   9046: 'Female ICE',
   9050: 'Metropole Ruhr',
   9202: 'Schleswig-Holstein',
+  9237: 'Spree',
   9457: 'Bundesrepublik Deutschland',
   9481: 'Rheinland-Pfalz',
 };

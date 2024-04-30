@@ -1,39 +1,43 @@
 /* eslint no-nested-ternary: 0 */
 import { format, subMinutes } from 'date-fns';
+import { Stack, styled } from '@mui/material';
+import { themeMixins } from '@/client/Themes/mixins';
 import { useCommonConfig } from '@/client/Common/provider/CommonConfigProvider';
-import styled from '@emotion/styled';
 import type { FC } from 'react';
 
-const DelayContainer = styled.span<{ early?: boolean; delayed?: boolean }>(
-  ({ theme, early }) => early && theme.mixins.early,
-  ({ theme, delayed }) => delayed && theme.mixins.delayed,
-);
-
-const Container = styled(DelayContainer.withComponent('div'))<{
+const Container = styled(Stack, {
+  shouldForwardProp: (p) =>
+    p !== 'early' && p !== 'delayed' && p !== 'cancelled' && p !== 'multiLine',
+})<{
+  early?: boolean;
+  delayed?: boolean;
   cancelled?: boolean;
   multiLine?: boolean;
 }>(
   {
     fontSize: '0.9em',
-    display: 'flex',
   },
-  ({ theme, cancelled }) => cancelled && theme.mixins.cancelled,
-  ({ multiLine }) => multiLine && { flexDirection: 'column' },
+  ({ theme, early }) => early && themeMixins.early(theme),
+  ({ theme, delayed }) => delayed && themeMixins.delayed(theme),
+  ({ theme, cancelled }) => cancelled && themeMixins.cancelled(theme),
+  ({ multiLine }) => !multiLine && { flexDirection: 'row' },
 );
 
-const TimeContainer = styled.span<{
+const TimeContainer = styled('span')<{
   isRealTime?: boolean;
   early?: boolean;
   delayed?: boolean;
   multiLine?: boolean;
+  isPlan?: boolean;
 }>(
   ({ multiLine }) =>
     !multiLine && {
       marginRight: '.2em',
     },
   ({ isRealTime }) => isRealTime && { fontWeight: 'bold' },
-  ({ theme, early }) => early && theme.mixins.early,
-  ({ theme, delayed }) => delayed && theme.mixins.delayed,
+  ({ isPlan }) => isPlan && { fontStyle: 'italic' },
+  ({ theme, early }) => early && themeMixins.early(theme),
+  ({ theme, delayed }) => delayed && themeMixins.delayed(theme),
 );
 
 interface Props {
@@ -44,6 +48,8 @@ interface Props {
   /** Not Schedule, not preview */
   isRealTime?: boolean;
   multiLine?: boolean;
+  // sourceo of Information is no realTime API but static
+  isPlan?: boolean;
 }
 
 function delayString(delay: number) {
@@ -61,6 +67,7 @@ export const Time: FC<Props> = ({
   cancelled,
   isRealTime,
   multiLine,
+  isPlan,
 }) => {
   const showDelayTime = useCommonConfig().delayTime;
   if (!real) return null;
@@ -69,8 +76,8 @@ export const Time: FC<Props> = ({
   const timeToDisplay = showDelayTime
     ? real
     : hasDelay
-    ? subMinutes(real, delay)
-    : real;
+      ? subMinutes(real, delay)
+      : real;
 
   return (
     <Container
@@ -84,10 +91,11 @@ export const Time: FC<Props> = ({
         data-testid="timeToDisplay"
         early={showDelayTime && hasDelay && delay <= 0}
         delayed={showDelayTime && hasDelay && delay > 0}
+        isPlan={isPlan}
       >
         {format(timeToDisplay, 'HH:mm')}
       </TimeContainer>
-      {hasDelay && (
+      {hasDelay && !cancelled && (
         <TimeContainer
           multiLine={multiLine}
           data-testid="realTimeOrDelay"

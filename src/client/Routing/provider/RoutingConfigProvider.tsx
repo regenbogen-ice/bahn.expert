@@ -8,6 +8,7 @@ import {
   startOfDay,
   subDays,
 } from 'date-fns';
+import { AllowedHafasProfile } from '@/types/HAFAS';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useStorage } from '@/client/useStorage';
 import constate from 'constate';
@@ -20,6 +21,7 @@ export interface RoutingSettings {
   transferTime: string;
   onlyRegional: boolean;
   onlyNetzcard: boolean;
+  hafasProfile?: AllowedHafasProfile.DB | AllowedHafasProfile.OEBB;
 }
 
 const useRoutingConfigInternal = ({
@@ -180,10 +182,11 @@ export const RoutingConfigProvider: FC<PropsWithChildren<unknown>> = ({
   const storage = useStorage();
 
   const savedRoutingSettings: RoutingSettings = {
-    maxChanges: storage.get('maxChanges') ?? '-1',
-    transferTime: storage.get('transferTime') ?? '0',
+    maxChanges: storage.get('maxChanges')?.toString() ?? '-1',
+    transferTime: storage.get('transferTime')?.toString() ?? '0',
     onlyRegional: storage.get('onlyRegional') ?? false,
     onlyNetzcard: storage.get('onlyNetzcard') ?? false,
+    hafasProfile: storage.get('hafasProfile') ?? AllowedHafasProfile.DB,
   };
 
   return (

@@ -1,5 +1,5 @@
 import type { Coordinate2D, TransportType } from '@/external/types';
-import type { Route$Auslastung } from '@/types/routing';
+import type { RouteAuslastung } from '@/types/routing';
 
 export interface StopPlaceIdentifier {
   stationId?: string;
@@ -8,6 +8,7 @@ export interface StopPlaceIdentifier {
   ril100?: string;
   alternativeRil100?: string[];
   evaNumber: string;
+  uic?: string;
 }
 
 export interface GroupedStopPlace {
@@ -19,20 +20,20 @@ export interface GroupedStopPlace {
   ril100?: string;
   alternativeRil100?: string[];
   stationId?: string;
+  uic?: string;
 }
 
-export type MinimalStopPlace = Pick<
-  GroupedStopPlace,
-  'name' | 'evaNumber' | 'ril100'
->;
+export interface MinimalStopPlace
+  extends Pick<GroupedStopPlace, 'name' | 'evaNumber' | 'ril100'> {}
 
 export interface TrainOccupancy<out T> {
   train: TrainOccupancyList<T>;
 }
 
-export interface TrainOccupancyList<out T = Route$Auslastung> {
-  [trainNumber: string]: T | null;
-}
+export type TrainOccupancyList<out T = RouteAuslastung> = Record<
+  string,
+  T | null
+>;
 
 export interface VRRTrainOccupancy {
   /**

@@ -37,6 +37,22 @@ module.exports = {
       rules: {
         '@typescript-eslint/no-unsafe-argument': 0,
         '@typescript-eslint/no-misused-promises': 0,
+
+        '@typescript-eslint/prefer-nullish-coalescing': 0,
+        '@typescript-eslint/ban-tslint-comment': 0,
+      },
+    },
+    {
+      files: [
+        '**/*.cy.tsx',
+        'cypress/fixtures/**/*',
+        'cypress/support/component.tsx',
+      ],
+      rules: {
+        'require-await': 0,
+        'testing-library/await-async-queries': 0,
+        'testing-library/prefer-screen-queries': 0,
+        'testing-library/await-async-utils': 0,
       },
     },
     {
@@ -56,6 +72,20 @@ module.exports = {
           'error',
           {
             patterns: ['@/server/*'],
+            paths: [
+              {
+                name: '@emotion/react',
+                message: 'use @mui/material',
+              },
+              {
+                name: '@mui/system',
+                message: 'use @mui/material',
+              },
+              {
+                name: '@emotion/styled',
+                message: 'use @mui/material',
+              },
+            ],
           },
         ],
         'no-process-env': 2,

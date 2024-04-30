@@ -1,6 +1,5 @@
 /* eslint-disable unicorn/prefer-module */
 import { ChunkExtractor } from '@loadable/server';
-import { commonConfigSanitize } from '@/client/util';
 import { renderToString } from 'react-dom/server';
 import { sanitizeStorage } from '@/server/sanitizeStorage';
 import { ServerBaseComponent } from '@/client/ServerBaseComponent';
@@ -9,10 +8,10 @@ import createEmotionServer from '@emotion/server/create-instance';
 import ejs from 'ejs';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { CommonConfigSanitize } from '@/client/Common/config';
 import type { Context } from 'koa';
 
 const headerFilename = path.resolve(__dirname, './views/header.ejs');
+
 // eslint-disable-next-line no-sync
 const headerEjs = fs.readFileSync(headerFilename, 'utf8').trim();
 const headerTemplate = ejs.compile(headerEjs, {
@@ -25,9 +24,7 @@ const footerEjs = fs
 const footerTemplate = ejs.compile(footerEjs);
 
 export default (ctx: Context): void => {
-  const emotionCache = createEmotionCache({
-    key: 'css',
-  });
+  const emotionCache = createEmotionCache({ key: 'css', prepend: true });
   // eslint-disable-next-line @typescript-eslint/unbound-method
   const { extractCriticalToChunks, constructStyleTagsFromChunks } =
     createEmotionServer(emotionCache);
@@ -39,21 +36,6 @@ export default (ctx: Context): void => {
   }
 
   sanitizeStorage(ctx.request.storage);
-
-  globalThis.configOverride = {
-    common: {},
-    abfahrten: {},
-  };
-
-  for (const key of Object.keys(ctx.query)) {
-    if (commonConfigSanitize.hasOwnProperty(key)) {
-      const value = commonConfigSanitize[key as keyof CommonConfigSanitize](
-        ctx.query[key],
-      );
-
-      globalThis.configOverride.common[key] = value;
-    }
-  }
 
   const headTags: any = [];
   const App = extractor.collectChunks(
@@ -67,22 +49,22 @@ export default (ctx: Context): void => {
 
   // eslint-disable-next-line testing-library/render-result-naming-convention
   const app = renderToString(App);
-  const emotionChunks = extractCriticalToChunks(app);
-  const emotionCss = constructStyleTagsFromChunks(emotionChunks);
+  const emotionStyles = extractCriticalToChunks(app);
+  const emotionStyleTags = constructStyleTagsFromChunks(emotionStyles);
   ctx.body = headerTemplate({
-    withStats: process.env.NODE_ENV === 'production',
+    withStats: process.env.NODE_ENV === 'production' && !process.env.TEST_RUN,
     header: renderToString(headTags),
     cssTags: extractor.getStyleTags(),
     linkTags: extractor.getLinkTags(),
-    configOverride: JSON.stringify(globalThis.configOverride),
     imprint: JSON.stringify(globalThis.IMPRINT),
-    emotionCss,
+    emotionCss: emotionStyleTags,
     baseUrl: globalThis.BASE_URL,
     rawBaseUrl: globalThis.RAW_BASE_URL,
-    renderedTheme: globalThis.RENDERED_THEME,
   });
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   ctx.body += app;
 
+  // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
   ctx.body += footerTemplate({
     scriptTags: extractor.getScriptTags(),
   });

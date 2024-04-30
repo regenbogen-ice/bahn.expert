@@ -1,3 +1,4 @@
+import { AllowedHafasProfile } from '@/types/HAFAS';
 import { getRouteLink } from '@/client/Routing/util';
 import { uniqBy } from '@/client/util';
 import { useCallback } from 'react';
@@ -34,10 +35,16 @@ export const useFetchRouting = () => {
       commonDestination &&
       commonStart.evaNumber !== commonDestination.evaNumber
         ? {
-            start: commonStart?.evaNumber,
-            destination: commonDestination?.evaNumber,
+            start: {
+              evaNumber: commonStart?.evaNumber,
+              type: 'stopPlace',
+            },
+            destination: {
+              evaNumber: commonDestination?.evaNumber,
+              type: 'stopPlace',
+            },
             via: commonVia.filter(Boolean).map((v) => ({
-              evaId: v.evaNumber,
+              evaNumber: v.evaNumber,
             })),
             ...settings,
             maxChanges: settings.maxChanges || '-1',
@@ -61,11 +68,22 @@ export const useFetchRouting = () => {
       setRoutes(undefined);
       try {
         const routingResult = (
-          await Axios.post<RoutingResult>('/api/hafas/v3/tripSearch', {
-            time: touchedDate ? date : new Date(),
-            searchForDeparture: departureMode === 'ab',
-            ...routeSettings,
-          })
+          await Axios.post<RoutingResult>(
+            '/api/hafas/v4/tripSearch',
+            {
+              time: touchedDate ? date : new Date(),
+              searchForDeparture: departureMode === 'ab',
+              ...routeSettings,
+            },
+            {
+              params: {
+                profile:
+                  routeSettings.hafasProfile === AllowedHafasProfile.OEBB
+                    ? routeSettings.hafasProfile
+                    : undefined,
+              },
+            },
+          )
         ).data;
 
         setRoutes(routingResult.routes);
@@ -112,7 +130,7 @@ export const useFetchRouting = () => {
 
       try {
         const routingResult = (
-          await Axios.post<RoutingResult>('/api/hafas/v3/tripSearch', {
+          await Axios.post<RoutingResult>('/api/hafas/v4/tripSearch', {
             ctxScr: type === 'earlier' ? earlierContext : laterContext,
             ...routeSettings,
           })

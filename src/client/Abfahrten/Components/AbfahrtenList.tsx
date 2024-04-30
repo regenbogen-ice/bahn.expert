@@ -5,6 +5,7 @@ import {
   SelectedDetailProvider,
   useSelectedDetail,
 } from '@/client/Abfahrten/provider/SelectedDetailProvider';
+import { Stack, styled } from '@mui/material';
 import { Streik } from '@/client/Common/Components/Streik';
 import {
   useAbfahrten,
@@ -19,27 +20,21 @@ import { useAbfahrtenUrlPrefix } from '@/client/Abfahrten/provider/AbfahrtenConf
 import { useCommonConfig } from '@/client/Common/provider/CommonConfigProvider';
 import { useEffect, useState } from 'react';
 import { useHeaderTagsActions } from '@/client/Common/provider/HeaderTagProvider';
-import { useSequencesActions } from '@/client/Common/provider/ReihungenProvider';
-import styled from '@emotion/styled';
+import { useSequencesActions } from '@/client/Common/provider/CoachSequenceProvider';
 import type { AbfahrtenResult } from '@/types/iris';
 import type { FC } from 'react';
 
-const LookaheadMarker = styled.div`
+const LookaheadMarker = styled('div')`
   height: 154px;
   position: absolute;
   bottom: 0;
 `;
 
-const Lookbehind = styled.div(({ theme }) => ({
+const Lookbehind = styled('div')(({ theme }) => ({
   position: 'relative',
   paddingTop: 10,
-  backgroundColor: theme.colors.shadedBackground,
+  backgroundColor: theme.vars.palette.common.shadedBackground,
 }));
-
-const Container = styled.main`
-  display: flex;
-  flex-direction: column;
-`;
 
 const InnerAbfahrtenList = () => {
   const { updateCurrentStopPlaceByString, setCurrentStopPlace, setError } =
@@ -146,7 +141,7 @@ const InnerAbfahrtenList = () => {
   return (
     <Loading check={unfilteredAbfahrten || error}>
       {() => (
-        <Container>
+        <Stack component="main">
           {error ? (
             <Navigate to={urlPrefix} />
           ) : filteredAbfahrten &&
@@ -173,7 +168,7 @@ const InnerAbfahrtenList = () => {
           ) : (
             <NothingFound unfilteredAbfahrten={unfilteredAbfahrten} />
           )}
-        </Container>
+        </Stack>
       )}
     </Loading>
   );

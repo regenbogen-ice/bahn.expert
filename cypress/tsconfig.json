@@ -14,5 +14,12 @@
       "@percy/cypress"
     ]
   },
-  "include": ["**/*.ts", "support/index.ts"]
+  "include": [
+    "**/*.ts",
+    "support/index.ts",
+    ".eslintrc.cjs",
+    "plugins/index.js",
+    "support/component.tsx"
+  ],
+  "exclude": ["support/component.tsx"]
 }

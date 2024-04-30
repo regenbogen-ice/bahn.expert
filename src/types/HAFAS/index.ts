@@ -6,6 +6,7 @@ import type { LocMatchRequest } from './LocMatch';
 import type { MinimalStopPlace } from '@/types/stopPlace';
 import type { SearchOnTripRequest } from '@/types/HAFAS/SearchOnTrip';
 import type { StationBoardRequest } from '@/types/HAFAS/StationBoard';
+import type { TransportType } from '@/external/types';
 import type { TripSearchRequest } from './TripSearch';
 
 export type JourneyFilterMode = 'BIT' | 'EXC' | 'INC' | 'UNDEF';
@@ -186,8 +187,13 @@ export interface CommonProductInfo {
   type?: string;
   operator?: OpL;
   admin?: string;
+  transportType: TransportType;
 }
 export interface CommonStopInfo {
+  /**
+   * Quelle dieser info ist die Planwagenreihung
+   */
+  isPlan?: boolean;
   /**
    * Scheduled Platform
    */
@@ -412,7 +418,7 @@ export interface PolyL {
 
 export interface OpL {
   name: string;
-  icoX: number;
+  icoX?: number;
 }
 
 export interface TcocL {

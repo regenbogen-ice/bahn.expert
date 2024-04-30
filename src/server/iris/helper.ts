@@ -1,6 +1,5 @@
-import { checkSecrets } from '@/server/checkSecret';
+import { axiosUpstreamInterceptor } from '@/server/admin';
 import { isValid, parse } from 'date-fns';
-import { upstreamApiCountInterceptor } from '@/server/admin';
 import { zonedTimeToUtc } from 'date-fns-tz';
 import Axios from 'axios';
 import type { AxiosInstance } from 'axios';
@@ -23,18 +22,12 @@ if (process.env.IRIS_FALLBACK_URL) {
     headers: {
       'user-agent': '',
     },
-    timeout: 3000,
+    timeout: 8000,
   });
-  fallbackRequest.interceptors.request.use(
-    upstreamApiCountInterceptor.bind(undefined, 'iris-fallback'),
-  );
+  axiosUpstreamInterceptor(fallbackRequest, 'iris-fallback');
 }
 
-noncdRequest.interceptors.request.use(
-  upstreamApiCountInterceptor.bind(undefined, 'iris-noncd'),
-);
-
-checkSecrets(process.env.IRIS_URL, process.env.IRIS_FALLBACK_URL);
+axiosUpstreamInterceptor(noncdRequest, 'iris-noncd');
 
 export async function irisGetRequest<T>(url: string): Promise<T> {
   try {
@@ -45,6 +38,7 @@ export async function irisGetRequest<T>(url: string): Promise<T> {
       fallbackRequest &&
       Axios.isAxiosError(error) &&
       error.response?.status !== 404 &&
+      error.response?.status !== 400 &&
       error.response?.status !== 410
     ) {
       const fallbackResult = (await fallbackRequest.get<T>(url)).data;

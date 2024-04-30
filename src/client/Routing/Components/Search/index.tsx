@@ -1,12 +1,14 @@
 import {
   Button,
+  css,
   Divider,
   FormControlLabel,
   Radio,
   RadioGroup,
+  Stack,
+  styled,
   TextField,
 } from '@mui/material';
-import { css } from '@emotion/react';
 import { Delete } from '@mui/icons-material';
 import {
   FavoriteBorder,
@@ -25,7 +27,6 @@ import {
   useRoutingConfig,
   useRoutingConfigActions,
 } from '@/client/Routing/provider/RoutingConfigProvider';
-import styled from '@emotion/styled';
 import type { FC, SyntheticEvent } from 'react';
 import type { MinimalStopPlace } from '@/types/stopPlace';
 
@@ -39,11 +40,8 @@ const setStopPlaceById = async (
   }
 };
 
-const FlexContainer = styled.div`
-  display: flex;
-`;
-
-const DateTimeContainer = styled(FlexContainer)`
+const DateTimeContainer = styled(Stack)`
+  flex-direction: row;
   align-items: center;
   & input {
     cursor: pointer;
@@ -74,7 +72,7 @@ const SwapOriginDest = styled(SwapVert)`
 
 const ClearIcon = SwapOriginDest.withComponent(Delete);
 
-const Buttons = styled.div(({ theme }) => ({
+const Buttons = styled('div')(({ theme }) => ({
   display: 'flex',
   margin: '15px 0 1em',
   '& > button:nth-of-type(1)': {
@@ -90,7 +88,7 @@ const Buttons = styled.div(({ theme }) => ({
     display: 'flex',
     justifyContent: 'space-between',
     padding: '5px 20px',
-    color: theme.palette.text.primary,
+    color: theme.vars.palette.text.primary,
   },
 }));
 
@@ -158,7 +156,7 @@ export const Search: FC = () => {
   const mappedViaList = useMemo(
     () =>
       via.map((v, index) => (
-        <FlexContainer key={index}>
+        <Stack direction="row" key={index}>
           <StopPlaceSearch
             groupedBySales
             id={`via${index}`}
@@ -169,7 +167,7 @@ export const Search: FC = () => {
             data-testid={`clearVia${index}`}
             onClick={() => updateVia(index)}
           />
-        </FlexContainer>
+        </Stack>
       )),
     [updateVia, via],
   );
@@ -194,7 +192,7 @@ export const Search: FC = () => {
           />
         )}
       </div>
-      <FlexContainer>
+      <Stack direction="row">
         <StopPlaceSearch
           groupedBySales
           id="routingDestinationSearch"
@@ -203,7 +201,7 @@ export const Search: FC = () => {
           placeholder="Destination"
         />
         <SwapOriginDest onClick={swapOriginDest} />
-      </FlexContainer>
+      </Stack>
       <DateTimeContainer>
         <StyledRadioGroup value={departureMode} onChange={updateDepartureMode}>
           <FormControlLabel

@@ -1,5 +1,5 @@
 import { BaseHeader } from '@/client/Common/Components/BaseHeader';
-import styled from '@emotion/styled';
+import { Stack } from '@mui/material';
 import type { FC } from 'react';
 
 const Privacy = () => (
@@ -39,17 +39,11 @@ const Privacy = () => (
   </div>
 );
 
-const Container = styled.div`
-  margin: 0 10px 0;
-  display: flex;
-  flex-direction: column;
-`;
-
 export const About: FC = () => {
   return (
     <>
       <BaseHeader spacing={0.3}>About</BaseHeader>
-      <Container>
+      <Stack margin="0 10px 0">
         <span>
           Entwickelt von{' '}
           <a
@@ -84,10 +78,11 @@ export const About: FC = () => {
         <span>
           Wer mich anderweitig kontaktieren möchte kann dies neben dem
           verlinkten Social Media Profil auch per mail an info (at) bahn (dot)
-          expert
+          expert. Bitte als Anrede nicht siezen. Im Idealfall einfach "marudor"
+          nutzen.
         </span>
         <Privacy />
-      </Container>
+      </Stack>
     </>
   );
 };

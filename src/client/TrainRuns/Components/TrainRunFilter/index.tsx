@@ -8,6 +8,8 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Stack,
+  styled,
   TextField,
 } from '@mui/material';
 import { Disclaimer } from '@/client/TrainRuns/Components/TrainRunFilter/Disclaimer';
@@ -15,7 +17,6 @@ import { Info } from '@mui/icons-material';
 import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
 import { useCallback, useEffect, useState } from 'react';
 import { useTrainRuns } from '@/client/TrainRuns/provider/TrainRunProvider';
-import styled from '@emotion/styled';
 import type {
   AvailableBR,
   AvailableIdentifierOnly,
@@ -23,9 +24,9 @@ import type {
 import type { FC } from 'react';
 import type { SelectChangeEvent } from '@mui/material';
 
-const FilterContainer = styled.div`
+const FilterContainer = styled(Stack)`
+  flex-direction: row;
   margin-top: 1em;
-  display: flex;
   justify-content: space-between;
   & > .MuiFormControl-root {
     flex: 1;
@@ -34,8 +35,8 @@ const FilterContainer = styled.div`
   }
 `;
 
-const ButtonContainer = styled.div`
-  display: flex;
+const ButtonContainer = styled(Stack)`
+  flex-direction: row;
   > button {
     margin-left: 0.5em;
   }

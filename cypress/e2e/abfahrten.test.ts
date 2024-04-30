@@ -10,7 +10,6 @@ describe('Abfahrten', () => {
       cy.findByTestId('abfahrtS35744').within(() => {
         cy.findByTestId('scrollMarker').should('exist');
       });
-      // eslint-disable-next-line jest/valid-expect-in-promise
       cy.window().then((w) =>
         cy
           .get('link[rel="canonical"]')
@@ -48,8 +47,8 @@ describe('Abfahrten', () => {
     });
   });
   it('going back & showing different station should reload', () => {
-    cy.mockFrankfurt({ delay: 2000 });
-    cy.mockHamburg({ delay: 2000 });
+    cy.mockFrankfurt({ delay: 500 });
+    cy.mockHamburg({ delay: 500 });
     cy.visit('/');
     cy.navigateToStation('Frankfurt (Main) Hbf');
     cy.findByTestId('loading').should('exist');
@@ -59,12 +58,12 @@ describe('Abfahrten', () => {
     cy.findByTestId('loading').should('exist');
     cy.findByTestId('lookahead').should('exist');
   });
-  it('Zugausfall not strike through', () => {
+  it('cancelled not strike through', () => {
     cy.mockHamburg();
     cy.visit('/');
     cy.navigateToStation('Hamburg Hbf');
     cy.findByTestId('abfahrtRB81616').within(() => {
-      cy.findByTestId('zugausfall').should(
+      cy.findByTestId('cancelled').should(
         'not.have.css',
         'text-decoration-line',
         'line-through',

@@ -1,9 +1,9 @@
+import { CoachSequenceProvider } from '@/client/Common/provider/CoachSequenceProvider';
 import { CommonConfigProvider } from '@/client/Common/provider/CommonConfigProvider';
 import { GlobalStyles } from '@mui/material';
 import { HeaderTagProvider } from '@/client/Common/provider/HeaderTagProvider';
 import { Loading } from '@/client/Common/Components/Loading';
 import { Navigation } from '@/client/Common/Components/Navigation';
-import { ReihungenProvider } from '@/client/Common/provider/ReihungenProvider';
 import { Route, Routes } from 'react-router-dom';
 import { RoutingProvider } from '@/client/Routing/provider/RoutingProvider';
 import loadable from '@loadable/component';
@@ -27,12 +27,12 @@ const globalStyles = (theme: Theme): any => ({
   body: {
     margin: 0,
     fontFamily: 'Roboto, sans-serif',
-    backgroundColor: theme.palette.background.default,
-    color: theme.palette.text.primary,
+    backgroundColor: theme.vars.palette.background.default,
+    color: theme.vars.palette.text.primary,
   },
   a: {
     textDecoration: 'none',
-    color: theme.colors.blue,
+    color: theme.vars.palette.common.blue,
   },
   'html, body': {
     height: '100%',
@@ -44,14 +44,16 @@ const globalStyles = (theme: Theme): any => ({
   },
 });
 
+export const GlobalCSS: FC = () => <GlobalStyles styles={globalStyles} />;
+
 export const App: FC = () => {
   return (
     <>
-      <GlobalStyles styles={globalStyles} />
+      <GlobalCSS />
       <HeaderTagProvider>
         <CommonConfigProvider>
           <Navigation>
-            <ReihungenProvider>
+            <CoachSequenceProvider>
               <RoutingProvider>
                 <Routes>
                   <Route path="/about" element={<About />} />
@@ -67,7 +69,7 @@ export const App: FC = () => {
                   <Route path="/*" element={<LazyAbfahrten />} />
                 </Routes>
               </RoutingProvider>
-            </ReihungenProvider>
+            </CoachSequenceProvider>
           </Navigation>
         </CommonConfigProvider>
       </HeaderTagProvider>

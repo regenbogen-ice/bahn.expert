@@ -1,12 +1,10 @@
 const childProcess = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs/promises');
-
-// const folderToBuild = ['business-hub', 'oebb', 'sbb', 'server', 'types'].map(
-//   (f) => `src/${f}`,
-// );
+require('./adjustSwcrc.cjs');
 
 const srcFolder = 'src';
+const distFolder = 'dist/server';
 async function build() {
   const srcPath = path.resolve(srcFolder);
   const folderToBuild = (await fs.readdir(srcPath)).map(
@@ -14,22 +12,23 @@ async function build() {
   );
   const buildPromises = folderToBuild.map((folder) => {
     const p = childProcess.spawn(
-      'babel',
+      'swc',
       [
-        '-x',
-        '.ts,.tsx,.js',
-        '--root-mode',
-        'upward',
+        '-s',
+        'false',
+        '-D',
+        '--strip-leading-paths',
+        '-C',
+        'minify=true',
+        '-C',
+        `env.targets.node=${process.versions.node}`,
         folder,
         '--out-dir',
-        folder,
-        '--ignore',
-        'node_modules/**',
+        distFolder,
       ],
       {
         env: {
           ...process.env,
-          SERVER: folder.endsWith('client') ? 0 : 1,
         },
       },
     );

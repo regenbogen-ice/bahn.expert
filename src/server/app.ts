@@ -63,7 +63,7 @@ export function createApp(): Koa {
   void devPromise.then(() => {
     app.use(hotHelper(() => errorHandler));
     app.use(hotHelper(() => normalizePathMiddleware()));
-    app.use(storageMiddleware());
+    app.use(storageMiddleware);
     for (const m of middlewares) app.use(m);
     app.use(KoaBodyparser());
 
@@ -100,9 +100,9 @@ export function createApp(): Koa {
     app.use(hotHelper(() => seoController));
 
     if (process.env.NODE_ENV === 'production') {
-      const loadableStats = require(path.resolve(
-        `${distFolder}/client/loadable-stats.json`,
-      ));
+      const loadableStats = require(
+        path.resolve(`${distFolder}/client/loadable-stats.json`),
+      );
 
       app.use((ctx, next) => {
         ctx.loadableStats = loadableStats;

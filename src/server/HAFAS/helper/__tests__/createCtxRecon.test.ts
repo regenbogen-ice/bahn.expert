@@ -1,8 +1,9 @@
 import { addSeconds, parse } from 'date-fns';
+import { describe, expect, it } from '@jest/globals';
 import createCtxRecon from '@/server/HAFAS/helper/createCtxRecon';
 import type {
-  Route$ValidArrivalStop,
-  Route$ValidDepartureStop,
+  RouteValidArrivalStop,
+  RouteValidDepartureStop,
 } from '@/types/HAFAS/JourneyDetails';
 
 describe('createCtxRecon', () => {
@@ -11,7 +12,7 @@ describe('createCtxRecon', () => {
   const departureTime = parse(expectedDeparture, 'yyyyMMddHHmm', 0);
   const arrivalTime = parse(expectedArrival, 'yyyyMMddHHmm', 0);
 
-  const firstStop: Route$ValidDepartureStop = {
+  const firstStop: RouteValidDepartureStop = {
     station: {
       evaNumber: '123',
       name: 'dummy',
@@ -22,7 +23,7 @@ describe('createCtxRecon', () => {
     },
   };
 
-  const lastStop: Route$ValidArrivalStop = {
+  const lastStop: RouteValidArrivalStop = {
     station: {
       evaNumber: '321',
       name: 'otherDummy',

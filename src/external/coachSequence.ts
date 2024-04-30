@@ -1,15 +1,33 @@
+import {
+  addHours,
+  format,
+  formatISO,
+  isWithinInterval,
+  subHours,
+} from 'date-fns';
+import { axiosUpstreamInterceptor } from '@/server/admin';
 import { Cache, CacheDatabase } from '@/server/cache';
-import { coachSequenceConfiguration } from '@/external/config';
-import { format, formatISO } from 'date-fns';
+import { Configuration as CoachSequenceConfiguration } from '@/external/generated/coachSequence';
 import { logger } from '@/server/logger';
 import { TransportsApi } from '@/external/generated/coachSequence';
-import { UpstreamApiRequestMetric } from '@/server/admin';
 import Axios from 'axios';
 import type { VehicleSequenceDeparture } from '@/external/generated/coachSequence';
+
+const coachSequenceConfiguration = new CoachSequenceConfiguration({
+  basePath: process.env.COACH_SEQUENCE_URL,
+  baseOptions: {
+    headers: {
+      'DB-Api-Key': process.env.COACH_SEQUENCE_CLIENT_SECRET,
+      'DB-Client-Id': process.env.COACH_SEQUENCE_CLIENT_ID,
+    },
+  },
+});
 
 const axiosWithTimeout = Axios.create({
   timeout: 4500,
 });
+
+axiosUpstreamInterceptor(axiosWithTimeout, 'coachSequence-newDB');
 
 const coachSequenceClient = new TransportsApi(
   coachSequenceConfiguration,
@@ -17,10 +35,16 @@ const coachSequenceClient = new TransportsApi(
   axiosWithTimeout,
 );
 
-const negativeHitCache = new Cache<string, boolean>(
-  CacheDatabase.NegativeNewSequence,
-  12 * 60 * 60,
-);
+const negativeHitCache = new Cache<boolean>(CacheDatabase.NegativeNewSequence);
+
+export function isWithin20Hours(date: Date): boolean {
+  const start = subHours(new Date(), 20);
+  const end = addHours(new Date(), 20);
+  return isWithinInterval(date, {
+    start,
+    end,
+  });
+}
 
 export async function getDepartureSequence(
   trainCategory: string,
@@ -29,6 +53,9 @@ export async function getDepartureSequence(
   plannedDepartureDate: Date,
   initialDepartureDate: Date,
 ): Promise<VehicleSequenceDeparture | undefined> {
+  if (!isWithin20Hours(plannedDepartureDate)) {
+    return undefined;
+  }
   const cacheKey = `${trainCategory}${trainNumber}${evaNumber}${plannedDepartureDate.toISOString()}${initialDepartureDate.toISOString()}`;
   try {
     const wasNotFound = await negativeHitCache.exists(cacheKey);
@@ -36,9 +63,6 @@ export async function getDepartureSequence(
       return undefined;
     }
     logger.debug('Trying new coachSequence');
-    UpstreamApiRequestMetric.inc({
-      api: 'coachSequence-newDB',
-    });
     const r = await coachSequenceClient.vehicleSequenceDepartureUnmatched({
       category: trainCategory,
       number: trainNumber,
@@ -46,7 +70,6 @@ export async function getDepartureSequence(
       date: format(initialDepartureDate, 'yyyy-MM-dd'),
       time: formatISO(plannedDepartureDate),
       includeAmenities: true,
-      // includeOccupancy: 'DETAIL',
       includePosition: true,
     });
     return r.data;

@@ -1,5 +1,6 @@
 /* eslint-disable unicorn/prefer-module */
 /* eslint no-sync: 0 */
+import { describe, expect, it } from '@jest/globals';
 import { Timetable } from '@/server/iris/Timetable';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +12,6 @@ describe('parseTimetableS', () => {
   const fixtures = fs.readdirSync(path.resolve(__dirname, baseFixturePath));
 
   for (const file of fixtures) {
-    // eslint-disable-next-line jest/valid-title
     it(file, () => {
       const timetable = new Timetable('test', 'test', {
         lookahead: 0,
